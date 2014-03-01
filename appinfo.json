@@ -1,0 +1,20 @@
+{
+  "uuid": "6656c938-5964-49b6-999e-06f9de84ea92",
+  "shortName": "TR4 Watchface",
+  "longName": "TR4 Watchface",
+  "companyName": "September 7 P/L",
+  "versionCode": 1,
+  "versionLabel": "1.0.0",
+  "watchapp": {
+    "watchface": true
+  },
+  "resources": {
+    "media": [
+      {
+        "type": "png",
+        "name": "GRANTS_TR4",
+        "file": "images/tr-4-pebble.png"
+      }
+	]
+  }
+}
