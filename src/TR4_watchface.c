@@ -9,12 +9,14 @@ Display an image of my TR-4
 static Window *window;
 
 static BitmapLayer *image_layer;
-static TextLayer *time_layer; 
+static TextLayer *time_layer;
+static TextLayer *date_layer;
 static TextLayer *battery_layer;
 
 static GBitmap *image;
 
-static int show_seconds = 0;
+static int show_seconds = 1;
+static int seconds_step = 5;
 
 static void handle_battery(BatteryChargeState charge_state) {
   static char battery_text[] = "100%";
@@ -30,13 +32,24 @@ static void handle_battery(BatteryChargeState charge_state) {
 // Called once per second, or per minute depending on value of show_seconds
 static void handle_clock_tick(struct tm* tick_time, TimeUnits units_changed) {
   static char time_text[] = "00:00:00"; // Needs to be static because it's used by the system later.
+  static char date_text[] = "00-00"; // Needs to be static because it's used by the system later.
+  static int day = 0; // Use to check change of date
 
-  if ( show_seconds )
-    strftime(time_text, sizeof(time_text), "%T", tick_time);
-  else
+  if ( show_seconds ) {
+    if ( (tick_time->tm_sec % seconds_step) == 0 )
+      strftime(time_text, sizeof(time_text), "%T", tick_time);
+  }
+  else {
     strftime(time_text, sizeof(time_text), "%R", tick_time);
+  }
   text_layer_set_text(time_layer, time_text);
-
+  
+  if ( day != tick_time->tm_mday ) {
+    day = tick_time->tm_mday;
+    strftime( date_text, sizeof(date_text), "%d-%m", tick_time);
+    text_layer_set_text(date_layer, date_text);
+  }
+  
   handle_battery(battery_state_service_peek());
 }
 
@@ -61,11 +74,18 @@ static void do_init(void) {
   layer_add_child(root_layer, bitmap_layer_get_layer(image_layer));
   
   // Init the text layer used to show the time
-  time_layer = text_layer_create(GRect(65, 10, frame.size.w - 65 /* width */, 34/* height */));
+  time_layer = text_layer_create(GRect(65, 0, frame.size.w - 65 /* width */, 28/* height */));
   text_layer_set_text_color(time_layer, GColorWhite);
   text_layer_set_background_color(time_layer, GColorClear);
   text_layer_set_font(time_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
-  text_layer_set_text_alignment(time_layer, GTextAlignmentCenter);
+  text_layer_set_text_alignment(time_layer, GTextAlignmentLeft);
+
+  // Init the text layer used to show the date
+  date_layer = text_layer_create(GRect(95, 20, frame.size.w - 95 /* width */, 30/* height */));
+  text_layer_set_text_color(date_layer, GColorWhite);
+  text_layer_set_background_color(date_layer, GColorClear);
+  text_layer_set_font(date_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_alignment(date_layer, GTextAlignmentLeft);
 
   // Init the text layer used to show the battery
   battery_layer = text_layer_create(GRect(105, 40, /* width */ frame.size.w - 105, 34 /* height */));
@@ -89,6 +109,7 @@ static void do_init(void) {
   battery_state_service_subscribe(&handle_battery);
 
   layer_add_child(root_layer, text_layer_get_layer(time_layer));
+  layer_add_child(root_layer, text_layer_get_layer(date_layer));
   layer_add_child(root_layer, text_layer_get_layer(battery_layer));
 }
 
@@ -99,6 +120,7 @@ static void do_deinit(void) {
   
   /* Destroy the layers */
   text_layer_destroy(time_layer);
+  text_layer_destroy(date_layer);
   text_layer_destroy(battery_layer);
   
   /* Destroy bitmap and bitmap layer */
